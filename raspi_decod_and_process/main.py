@@ -10,7 +10,6 @@ import serial
 from log_reader import reader_logs
 from Kalman_filter import EKF3
 
-stop = False
 
 # Set the type of GPIO
 GPIO.setmode(GPIO.BCM)
@@ -114,7 +113,7 @@ def MotorStop():
     '''
       The car stops. The car will continue to stand until another movement is called.
    '''
-    print('motor stop')
+    #print('motor stop')
     GPIO.output(ENA, False)
     GPIO.output(ENB, False)
     GPIO.output(IN1, False)
@@ -154,15 +153,17 @@ def new_proc():
     print("open")
     proc = subprocess.Popen("python user.py", shell=True)
     while not stop:
+        print("work")
         time.sleep(1)
-        print("user program work...")
     try:
-        proc.wait(timeout=3)
+        proc.wait(timeout=1)
     except subprocess.TimeoutExpired:
         kill(proc.pid)
 
 
-start = False
+stop = False
+flag = False
+file_create = False
 mainloop = True
 # Основная программа
 with serial.Serial() as ser:  # содержимое порта сохраняется в переменную ser, затем используется в дальнейшем
@@ -173,6 +174,9 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
     ser.write(b'\r\r')  # Для передачи данных используется метод write. Ему нужно передавать байтовую строку
     print(ser.portstr)
     new_str = ser.read_until(b'\n')
+    ser.write(b'les\n')
+    time.sleep(2)
+    ser.write(b'\r\r')
     ser.write(b'les\n')
     log = ""
     while mainloop:
@@ -186,21 +190,24 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
         elif keys[pygame.K_RIGHT]:
             MotorTurnLeft()
         elif keys[pygame.K_1]:
-            print("create user file")
-            f = open("testo.py", 'r')
-            s = encode(str(f.read()))
-            f.close()
-            f2 = open("user.py", "w")
-            f2.write(decode(s))
-            f2.close()
+            if not file_create:
+                print("create user file")
+                f = open("testo.py", 'r')
+                s = encode(str(f.read()))
+                f.close()
+                f2 = open("user.py", "w")
+                f2.write(decode(s))
+                f2.close()
+                file_create = True
         elif keys[pygame.K_2]:
-            if not start:
+            if not flag:
                 print("Process starting...")
+                stop = False
                 new = Thread(target=new_proc)
                 new.start()
                 flag = True
         elif keys[pygame.K_3]:
-            if start:
+            if flag:
                 print("Process stop")
                 stop = True
                 flag = False
@@ -213,7 +220,7 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
         if len(new_str) > 10:
             q = new_str.decode('ascii')
             log = str(q)
-            print(str(q))
+            #print(str(q))
         if new_str == b' Help      :  ? or help\r\n':  # когда дошел до последней строки печатает ее
             last_str = ser.read_until(b'\n')
             print(last_str)
@@ -223,7 +230,7 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
         store = reader_logs(log)
         list_keys = []
         j = 0
-        print(store)
+        #print(store)
         try:
             for key in store:
                 list_keys.append(key)
@@ -232,7 +239,7 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
             R = {}
             for key in store:
                 R[key] = store[key]['range']
-            print(R)
+            #print(R)
             x_est, D_x = EKF3(R, x_est_prev, D_x_prev, D_n_mat, x_sat, T_sample, list_keys)
             D_x_prev = D_x
             x_est_prev = x_est
