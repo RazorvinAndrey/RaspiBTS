@@ -56,10 +56,6 @@ def ClearPins():
 
 
 def MotorForward():
-    '''
-      The car is going forward.
-      The movement will continue until another motion function or the MotorStop() function is called.
-   '''
     print('motor forward')
     GPIO.output(ENA, True)
     GPIO.output(ENB, True)
@@ -70,10 +66,6 @@ def MotorForward():
 
 
 def MotorBackward():
-    '''
-      The car is going forward.
-       The movement will continue until another motion function or the MotorStop() function is called.
-   '''
     print('motor backward')
     GPIO.output(ENA, True)
     GPIO.output(ENB, True)
@@ -84,9 +76,6 @@ def MotorBackward():
 
 
 def MotorTurnRight():
-    '''
-      The car turns right. The turn will continue until another motion function or the MotorStop() function is called.
-   '''
     print('motor turnright')
     GPIO.output(ENA, True)
     GPIO.output(ENB, True)
@@ -97,9 +86,6 @@ def MotorTurnRight():
 
 
 def MotorTurnLeft():
-    '''
-      The car turns left. The turn will continue until another motion function or the MotorStop() function is called.
-   '''
     print('motor turnleft')
     GPIO.output(ENA, True)
     GPIO.output(ENB, True)
@@ -110,10 +96,7 @@ def MotorTurnLeft():
 
 
 def MotorStop():
-    '''
-      The car stops. The car will continue to stand until another movement is called.
-   '''
-    #print('motor stop')
+    print('motor stop')
     GPIO.output(ENA, False)
     GPIO.output(ENB, False)
     GPIO.output(IN1, False)
@@ -243,8 +226,19 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
             x_est, D_x = EKF3(R, x_est_prev, D_x_prev, D_n_mat, x_sat, T_sample, list_keys)
             D_x_prev = D_x
             x_est_prev = x_est
+            f3 = open("state.txt", "w")
+            f3.write(str(x_est[0]) + " " + str(x_est[1]))
+            f3.close()
             list_x.append(x_est[0])
             list_y.append(x_est[1])
+            '''Чтение координат в программе пользователя:
+                with open("state.txt", "r") as f:
+                    string = str(f.read())
+                    temp_str = string.split(' ')
+                    x = float(temp_str[0])
+                    y = float(temp_str[1])
+            '''
+
         except:
             pass
 
