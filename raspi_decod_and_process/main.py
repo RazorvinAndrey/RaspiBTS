@@ -7,8 +7,8 @@ import subprocess
 import RPi.GPIO as GPIO
 import pygame
 import serial
-from log_reader import reader_logs
-from Kalman_filter import EKF3
+from raspi_decod_and_process.kalman_filter.log_reader import reader_logs
+from raspi_decod_and_process.kalman_filter.Kalman_filter import EKF3
 
 
 # Set the type of GPIO

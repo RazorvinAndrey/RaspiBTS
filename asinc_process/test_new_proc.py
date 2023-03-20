@@ -49,7 +49,7 @@ while mainloop:
             flag = False
     elif keys[pygame.K_1]:
         print("Change button")
-        f2 = open("text.txt", "w")
+        f2 = open("../text.txt", "w")
         f2.write(str(i))
         f2.close()
     else:
