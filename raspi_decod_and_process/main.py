@@ -156,6 +156,7 @@ def NewProc():
         Kill(proc.pid)
 
 
+# Флаги для работы переключателей
 stop = False
 flag = False
 file_create = False
@@ -193,6 +194,7 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
             if not file_create:
                 print("create user file")
                 f = open("testo.py", 'r')
+                # Тут будет приём строки закодированного файла пользователя
                 s = Encode(str(f.read()))
                 f.close()
                 f2 = open("user.py", "w")
@@ -243,7 +245,8 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
                 f3.close()
             list_x.append(x_est[0])
             list_y.append(x_est[1])
-
+            print("x = ", x_est[0])
+            print("y = ", x_est[1])
         except:
             pass
 
