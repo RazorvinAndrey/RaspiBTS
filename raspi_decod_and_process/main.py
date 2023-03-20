@@ -54,6 +54,7 @@ def ClearPins():
     return
 
 
+# Управление моторами
 def MotorForward():
     print('motor forward')
     GPIO.output(ENA, True)
@@ -220,10 +221,6 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
         if len(new_str) > 10:
             q = new_str.decode('ascii')
             log = str(q)
-        if new_str == b' Help      :  ? or help\r\n':  # когда дошел до последней строки печатает ее
-            last_str = ser.read_until(b'\n')
-            print(last_str)
-            mainloop = False
 
         # Определение координат
         store = reader_logs(log)
