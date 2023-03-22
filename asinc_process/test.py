@@ -1,6 +1,24 @@
+import time
+
+
+def GetPosition():
+    with open("state.txt", "r") as f:
+        string = str(f.read())
+        if not (string == ''):
+            temp_str = string.split(' ')
+            if not (temp_str[0] == ''):
+                x = float(temp_str[0])
+                y = float(temp_str[1])
+            return x, y
+
 
 while True:
-    with open("../text.txt", "r") as f:
-        i = f.read()
-        print("Прошло", i, "секунд ")
+    data = GetPosition()
+    if data:
+        x = data[0]
+        y = data[1]
+        print("x = ", x)
+        print("y = ", y)
+
+
 

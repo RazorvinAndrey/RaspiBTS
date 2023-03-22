@@ -5,12 +5,11 @@ import base64
 import psutil
 import subprocess
 import RPi.GPIO as GPIO
-import pygame
 import serial
-import websocket
-import json
 from raspi_decod_and_process.kalman_filter.log_reader import reader_logs
 from raspi_decod_and_process.kalman_filter.Kalman_filter import EKF3
+import websocket
+import json
 
 # Set the type of GPIO
 GPIO.setmode(GPIO.BCM)
@@ -32,11 +31,6 @@ GPIO.setup(ENB, GPIO.OUT, initial=GPIO.LOW)
 GPIO.setup(IN3, GPIO.OUT, initial=GPIO.LOW)
 GPIO.setup(IN4, GPIO.OUT, initial=GPIO.LOW)
 
-# Init pygame
-pygame.init()
-screen = pygame.display.set_mode((240, 120), pygame.RESIZABLE)
-pygame.display.update()
-
 # Константы для фильтра Калмана
 X_prev = np.array([0, 0, 0, 0.2, 0, 0, 0, 0, 0])  # начальное положение
 D_n_UWB = 0.0009
@@ -49,57 +43,46 @@ D_x_prev = np.eye(X_prev.shape[0])
 list_x = []
 list_y = []
 
-# Переменная для приёма данных от пользователя
-out = ""
-
-api = ''
-
 
 # Обработчики для подключения к серверу
-def on_message(ws_l):
-    return json.loads(ws_l.recv())
+def on_message(ws):
+    return json.loads(ws.recv())
 
 
-def on_error(ws_l):
-    x = json.loads(ws_l.recv())
+def on_error(ws):
+    x = json.loads(ws.recv())
     if x["status"] == "false":
         print("Error")
 
 
-def sendPos(ws_l, x, y):
-    j_mes = json.dumps({"action": "SendPos", "data": {"apikey": api, "position": {"x": x, "y": y}}})
-    ws_l.send(j_mes)
-
-
-def sendLog(ws_l, x):
-    j_mes = json.dumps({"action": "SendLog", "data": {"log": "x"}})
-    ws_l.send(j_mes)
-
-
-def on_close(ws_l):
-    x = json.loads(ws_l.recv())
+def on_close(ws):
+    x = json.loads(ws.recv())
     if x["action"] == "Close":
-        ws_l.close()
+        ws.close()
 
 
-def on_open(ws_l):
+def on_open(ws):
     print("Connection open")
-    j_mes = json.dumps({"action": "carLogin", "data": {"login": "***", "password": "***"}})
-    ws_l.send(j_mes)
-    req = ws_l.recv(timeout=100)
+    mess = json.dumps({"action": "carLogin", "data": {"login": "***", "password": "***"}})
+    ws.send(mess)
+    message = ws.recv(timeout=100)
     if message:
         print("Connection failes")
     else:
-        ans = json.loads(req)
+        ans = json.loads(message)
         if ans["status"] == "true":
             print("Connection comleted")
-            api = ans["data"]["apikey"]
         else:
             print("Connection failed")
 
 
-def start_websocket(ws_l):
-    ws_l.run_forever()  # запуск бесконечного соединения
+def start_websocket():
+    ws = websocket.WebSocketApp("***",  # подключение к серверу
+                                on_message=on_message,  # обозначение обработчиков
+                                on_error=on_error,
+                                on_close=on_close,
+                                on_open=on_open)
+    ws.run_forever()  # запуск бесконечного соединения
 
 
 def ClearPins():
@@ -173,8 +156,8 @@ def RemoteControl(control):
 
 
 # Кодирование
-def Encode(code):
-    message_bytes = code.encode('ascii')  # Кодируем символы в ASCII формат(преобразуем сообщение в байтовый объект)
+def Encode(message):
+    message_bytes = message.encode('ascii')  # Кодируем символы в ASCII формат(преобразуем сообщение в байтовый объект)
     base64_bytes = base64.b64encode(message_bytes)  # кодируем в base64
     base64_message = base64_bytes.decode('ascii')  # расшифровываем закодированную строку в Base64
 
@@ -185,9 +168,9 @@ def Encode(code):
 def Decode(base64_message):
     base64_bytes = base64_message.encode('ascii')
     message_bytes = base64.b64decode(base64_bytes)
-    code = message_bytes.decode('ascii')
+    message = message_bytes.decode('ascii')
 
-    return code
+    return message
 
 
 # Уничтожение дочерней программы
@@ -199,32 +182,28 @@ def Kill(proc_pid):
 
 
 # Новая программа от пользователя
-def NewProc(ws_l):
+def NewProc():
     print("open")
-    proc = subprocess.Popen(["python", "user.py"], stdout=subprocess.PIPE)
-    while not stop and proc.returncode is None:
-        instr = proc.stdout.readline().decode("utf8")
-        sendLog(ws_l, instr)
-        print(instr)
-    rc = proc.poll()
-    print(rc)
+    proc = subprocess.Popen("python user.py", shell=True)
+    while not stop:
+        print("work")
+        time.sleep(1)
     try:
         proc.wait(timeout=1)
     except subprocess.TimeoutExpired:
         Kill(proc.pid)
 
 
-ws = websocket.WebSocketApp("***", on_message=on_message, on_error=on_error, on_close=on_close, on_open=on_open)
 websocket_thread = Thread(target=start_websocket)
 websocket_thread.start()
 
 # Флаги для работы переключателей
+mainloop = True
 stop = False
 flag = False
 file_create = False
-mainloop = True
-active = "remote_control"
 # Основная программа
+
 with serial.Serial() as ser:  # содержимое порта сохраняется в переменную ser, затем используется в дальнейшем
     ser.baudrate = 115200  # скорость передачи данных
     ser.port = '/dev/ttyACM0'  # выбор порта передачи
@@ -239,7 +218,7 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
     ser.write(b'les\n')
     log = ""
     while mainloop:
-        message = on_message(ws)
+        message = on_message()
         if message["action"] == "SendCommand":
             if message["data"]["command"] == "forward":
                 control_key = "forward"
@@ -249,27 +228,27 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
                 control_key = "left"
             elif message["data"]["command"] == "turnRight":
                 control_key = "right"
-            else:
-                control_key = "stop"
-            RemoteControl(control_key)
+        else:
+            control_key = "stop"
+        RemoteControl(control_key)
         if message["action"] == "sendFirmware":
-            if message["data"]["command"] == "create":
-                if not file_create:
-                    print("create user file")
-                    # Тут будет приём строки закодированного файла пользователя
-                    s = message["data"]["data_1"]
-                    f2 = open("user.py", "w")
-                    f2.write(Decode(s))
-                    f2.close()
-                    file_create = True
-            elif message["data"]["command"] == "start":
+            if not file_create:
+                print("create user file")
+                # Тут будет приём строки закодированного файла пользователя
+                s = message["data"]["data_1"]
+                f2 = open("user.py", "w")
+                f2.write(Decode(s))
+                f2.close()
+                file_create = True
+        elif message["action"] == "runProgram":
+            if message["data"] == "start":
                 if not flag:
                     print("Process starting...")
                     stop = False
-                    new = Thread(target=NewProc(ws))
+                    new = Thread(target=NewProc)
                     new.start()
                     flag = True
-            elif message["data"]["command"] == "stop":
+            if message["data"] == "stop":
                 if flag:
                     print("Process stop")
                     stop = True
@@ -300,17 +279,11 @@ with serial.Serial() as ser:  # содержимое порта сохраняе
             with open("state.txt", "w") as f3:
                 f3.write(str(x_est[0]) + " " + str(x_est[1]))
                 f3.close()
-            sendPos(ws, x_est[0], x_est[1])
+
+            print("x = ", x_est[0])
+            print("y = ", x_est[1])
         except:
             pass
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                mainloop = False
-        pygame.display.update()
-
 ClearPins()
-print("X ")
-print(list_x)
-print("Y ")
-print(list_y)
+
