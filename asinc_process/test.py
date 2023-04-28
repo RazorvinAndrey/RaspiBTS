@@ -11,14 +11,17 @@ def GetPosition():
                 y = float(temp_str[1])
             return x, y
 
-
+i = 0
 while True:
-    data = GetPosition()
-    if data:
-        x = data[0]
-        y = data[1]
-        print("x = ", x)
-        print("y = ", y)
+    # data = GetPosition()
+    # if data:
+    #     x = data[0]
+    #     y = data[1]
+    #     print("x = ", x)
+    #     print("y = ", y)
+    print(i, flush=True)
+    i = i + 1
+
 
 
 

@@ -24,10 +24,11 @@ def kill(proc_pid):
 def new_proc():
     print("open")
 
-    proc = subprocess.Popen(["python", "test.py"], stdout=subprocess.PIPE)
+    proc = subprocess.Popen(["python", "test.py"], stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
     while not stop and proc.returncode is None:
-        instr = proc.stdout.readline().decode("utf8")
+        instr = proc.stdout.readline()
         print(instr)
+        time.sleep(1)
     try:
         proc.wait(timeout=1)
     except subprocess.TimeoutExpired:
